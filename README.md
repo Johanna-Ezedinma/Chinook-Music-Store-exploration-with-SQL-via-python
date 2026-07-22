@@ -5,8 +5,10 @@
 **Author:** Johanna Ezedinma  
 **Date:** July 2026
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/johanna-ezedinma/)
-[![Medium](https://img.shields.io/badge/Medium-12100E?style=for-the-badge&logo=medium&logoColor=white)](https://medium.com/@johannaezedinma) [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Johanna-Ezedinma)
+<p align="left">
+  <a href="https://www.linkedin.com/in/johanna-ezedinma/?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white"></a>
+  <a href= "https://medium.com/@johannaezedinma"><img src="https://img.shields.io/badge/Medium-12100E?style=for-the-badge&logo=medium&logoColor=white"></a>
+</p>
 
 ---
 
@@ -14,11 +16,9 @@
 
 This project explores the Chinook digital music store database (11 tables: artists, albums, tracks, genres, media types, employees, customers, invoices, and invoice lines) entirely in PostgreSQL, queried through Jupyter using `%%sql` magic. It starts with schema discovery (table sizes, column data types, nullability), moves through core querying (filtering, sorting, grouping, aggregates), then into joins, subqueries, and window functions, and closes with business questions around sales performance and customer spend.
 
--# Chinook Music Store: SQL Exploration (PostgreSQL)
-
 ## Approach used, and why
 
-SQL was chosen over pandas for this project because Chinook is a genuinely relational database, eight interconnected tables joined by real foreign keys, not a flat file. Answering questions like "which employee generated the most sales" or "which tracks rank highest by length within their own genre" requires joining across several tables and comparing individual rows against group-level values, exactly what SQL's `JOIN` and window function syntax is built to do directly, without first flattening everything into one table.
+SQL was chosen over pandas because Chinook is a relational database; eight interconnected tables joined by real foreign keys, not a flat file. Answering questions like "which employee generated the most sales" or "which tracks rank highest by length within their own genre" requires joining across several tables and comparing individual rows against group-level values, exactly what SQL's `JOIN` and window function syntax is built to do directly, without first flattening everything into one table.
 
 Running the queries through Jupyter (rather than a GUI client like pgAdmin) kept the SQL, its real output, and the reasoning behind each query together in one reviewable document, rather than split across a query tool and a separate write-up.
 
@@ -26,7 +26,12 @@ Running the queries through Jupyter (rather than a GUI client like pgAdmin) kept
 
 ## Business problem solved
 
-The project answers a set of operational questions a music store's management would realistically want answered: which sales agents are the top performers, which customers spend the most (and which spend above the store-wide average), which countries the customer base is concentrated in, which genres and media types are most popular by track count, and whether any staff currently outrank their own manager in the reporting hierarchy.
+The project answers a set of operational questions a music store's management would realistically want answered:
+which sales agents are the top performers,  
+which customers spend the most (and which spend above the store-wide average),  
+which countries the customer base is concentrated in,  
+which genres and media types are most popular by track count, and  
+whether any staff currently outrank their own manager in the reporting hierarchy.
 
 ---
 
@@ -50,6 +55,12 @@ Chinook arrives as a pre-built, already-clean sample database. A full-row duplic
 
 - **`company` and `state` are `NULL` for a meaningful share of customers.** These aren't errors, they reflect real individual customers (no company to list) and countries without a state/province system. Missing `company` values were surfaced directly with `IS NULL`; missing `state` values were handled at query time with `COALESCE(state, 'No State Provided')`, which improves readability in the output without altering the underlying data.
 - **Repeated track names (e.g. "The Trooper" appearing 5 times) are not duplicate rows.** Checked directly against the data, each instance has a distinct `track_id`, a different `album_id`, and a slightly different runtime, confirming these are legitimate separate recordings (the same song appearing on different albums or compilations), not something to deduplicate.
+- **Several columns also had missing values**, checked systematically across every table during profiling. In every case, absence turned out to reflect something real rather than a data error,
+  so nothing was filled in or dropped:
+- `customer.company` was blank for `49 of 59 customers` (individual customers, not business accounts),
+- `customer.state` and `invoice.billing_state` were blank for customers and orders based in countries that don't use a state/province system, and a handful of postal codes were blank for the same reason.
+- `employee.reports_to` was blank for exactly `one employee`, `the General Manager`, who has no one above them to report to; this is excluded automatically wherever an INNER JOIN compares an employee to their manager, since there's nothing to join against.
+- However one gap worth flagging specifically is `track.composer`, `missing for 977 of 3,503` tracks (about `28%` of the catalog), a large enough share that any future analysis grouping or filtering by composer should account for it rather than silently working with an incomplete 72% of the data.
 
 ---
 
@@ -73,9 +84,38 @@ It was rebuilt to derive rank explicitly from job title (`General Manager`, then
 
 PostgreSQL, SQL (via `jupysql`/`ipython-sql` in Jupyter)
 
-## Files
+---
 
-- `Chinook_Music_Store_exploration_with_SQL_via_python.ipynb`: full notebook, schema exploration, core and advanced queries, business questions
+## Repository Structure
+
+```
+chinook_music_store_exploration/
+│
+├── documentation/
+│   └── data_quality_audit.md
+│
+├── notebooks/
+│   ├── 01_chinook_data_profiling.ipynb
+│   ├── 02_chinook_data_preparation.ipynb
+│   └── 03_chinook_business_analysis.ipynb
+│
+├── sql/
+│   └── database_creation_and_normalization.sql
+│
+├── README.md
+└── requirements.txt
+```
+
+---
+
+## Pipeline Order
+
+This project runs in one continuous sequence:
+
+1. `sql/01_database_creation.sql` — create the database, noemalize and load the raw table
+2. `notebooks/01_chinook_data_profiling.ipynb` — audit schema, missing values, duplicates
+3. `notebooks/02_chinook_data_preparation.ipynb` — apply and verify targeted fixes
+4. `notebooks/03_chinook_business_analysis.ipynb` — business questions, KPIs, insights
 
 ---
 
